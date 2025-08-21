@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = neon(process.env.NETLIFY_DATABASE_URL);
 
 // 初始化数据库表
 export async function initDatabase() {
