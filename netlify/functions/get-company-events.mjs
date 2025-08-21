@@ -19,6 +19,7 @@ export default async function handler(event, context) {
   }
 
   try {
+    console.log(JSON.stringif(event))
     if (event.httpMethod !== 'GET') {
       return new Response(JSON.stringify({ error: '只支持GET请求' }), {
         status: 405,
