@@ -13,15 +13,20 @@ export const handler = async (event, context) => {
   };
 
   if (event.httpMethod === 'OPTIONS') {
-    return new Response('', { status: 200, headers });
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
+    };
   }
 
   try {
     if (event.httpMethod !== 'POST') {
-      return new Response(JSON.stringify({ error: '只支持POST请求' }), {
-        status: 405,
-        headers
-      });
+      return {
+        statusCode: 405,
+        headers,
+        body: JSON.stringify({ error: '只支持POST请求' })
+      };
     }
 
     const body = JSON.parse(event.body || '{}');
@@ -29,24 +34,26 @@ export const handler = async (event, context) => {
 
     // 验证必填字段
     if (!author || !content) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: '姓名和评论内容为必填项'
-      }), {
-        status: 400,
-        headers
-      });
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: '姓名和评论内容为必填项'
+        })
+      };
     }
 
     // 验证验证码
     if (!validateCaptcha(captcha, captchaAnswer)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: '验证码错误'
-      }), {
-        status: 400,
-        headers
-      });
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: '验证码错误'
+        })
+      };
     }
 
     // 获取客户端信息
@@ -73,29 +80,32 @@ export const handler = async (event, context) => {
     }, ip, userAgent);
 
     if (result.success) {
-      return new Response(JSON.stringify({
-        success: true,
-        message: '评论发表成功',
-        data: result.data
-      }), {
-        status: 200,
-        headers
-      });
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          message: '评论发表成功',
+          data: result.data
+        })
+      };
     } else {
-      return new Response(JSON.stringify(result), {
-        status: 500,
-        headers
-      });
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify(result)
+      };
     }
 
   } catch (error) {
     console.error('添加评论失败:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: '服务器内部错误'
-    }), {
-      status: 500,
-      headers
-    });
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: '服务器内部错误'
+      })
+    };
   }
 }

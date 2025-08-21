@@ -15,41 +15,49 @@ export const handler = async (event, context) => {
   };
 
   if (event.httpMethod === 'OPTIONS') {
-    return new Response('', { status: 200, headers });
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
+    };
   }
 
   try {
     console.log(JSON.stringify(event))
     if (event.httpMethod !== 'GET') {
-      return new Response(JSON.stringify({ error: '只支持GET请求' }), {
-        status: 405,
-        headers
-      });
+      return {
+        statusCode: 405,
+        headers,
+        body: JSON.stringify({ error: '只支持GET请求' })
+      };
     }
 
     const { page = 1, limit = 6 } = event.queryStringParameters || {};
     const result = await getCompanyEvents(parseInt(page), parseInt(limit));
 
     if (result.success) {
-      return new Response(JSON.stringify(result), {
-        status: 200,
-        headers
-      });
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(result)
+      };
     } else {
-      return new Response(JSON.stringify(result), {
-        status: 500,
-        headers
-      });
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify(result)
+      };
     }
 
   } catch (error) {
     console.error('获取公司事件失败:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: '服务器内部错误'
-    }), {
-      status: 500,
-      headers
-    });
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: '服务器内部错误'
+      })
+    };
   }
 }
