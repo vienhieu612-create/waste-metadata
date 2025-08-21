@@ -19,16 +19,15 @@ export default async function handler(event, context) {
   };
 
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return new Response('', { status: 200, headers });
   }
 
   try {
     if (event.httpMethod !== 'POST') {
-      return {
-        statusCode: 405,
-        headers,
-        body: JSON.stringify({ error: '只支持POST请求' })
-      };
+      return new Response(JSON.stringify({ error: '只支持POST请求' }), {
+        status: 405,
+        headers
+      });
     }
 
     const body = JSON.parse(event.body || '{}');
@@ -36,69 +35,64 @@ export default async function handler(event, context) {
 
     // 验证必填字段
     if (!title || !description) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: '标题和描述为必填项'
-        })
-      };
+      return new Response(JSON.stringify({
+        success: false,
+        error: '标题和描述为必填项'
+      }), {
+        status: 400,
+        headers
+      });
     }
     
     // 验证图片数据
     if (images && Array.isArray(images)) {
       if (images.length > 5) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: '最多只能上传5张图片',
-            code: 'TOO_MANY_IMAGES'
-          })
-        };
+        return new Response(JSON.stringify({
+          success: false,
+          error: '最多只能上传5张图片',
+          code: 'TOO_MANY_IMAGES'
+        }), {
+          status: 400,
+          headers
+        });
       }
       
       for (let i = 0; i < images.length; i++) {
         const image = images[i];
         if (typeof image !== 'string') {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              error: `第${i + 1}张图片数据格式无效`,
-              code: 'INVALID_IMAGE_TYPE'
-            })
-          };
+          return new Response(JSON.stringify({
+            success: false,
+            error: `第${i + 1}张图片数据格式无效`,
+            code: 'INVALID_IMAGE_TYPE'
+          }), {
+            status: 400,
+            headers
+          });
         }
         
         if (!image.startsWith('data:image/')) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              error: `第${i + 1}张图片不是有效的base64图片格式`,
-              code: 'INVALID_IMAGE_FORMAT'
-            })
-          };
+          return new Response(JSON.stringify({
+            success: false,
+            error: `第${i + 1}张图片不是有效的base64图片格式`,
+            code: 'INVALID_IMAGE_FORMAT'
+          }), {
+            status: 400,
+            headers
+          });
         }
         
         // 检查支持的图片格式
         const supportedFormats = ['data:image/jpeg', 'data:image/jpg', 'data:image/png', 'data:image/gif'];
         const isSupported = supportedFormats.some(format => image.startsWith(format));
         if (!isSupported) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              error: `第${i + 1}张图片格式不支持，只支持 JPG、PNG、GIF 格式`,
-              code: 'UNSUPPORTED_IMAGE_FORMAT'
-            })
-          };
+          return new Response(JSON.stringify({
+            success: false,
+            error: `第${i + 1}张图片格式不支持，只支持 JPG、PNG、GIF 格式`,
+            code: 'UNSUPPORTED_IMAGE_FORMAT'
+          }), {
+            status: 400,
+            headers
+          });
         }
         
         // 检查图片大小（base64编码后的大小约为原始大小的4/3）
@@ -106,30 +100,28 @@ export default async function handler(event, context) {
         const maxSize = 5 * 1024 * 1024; // 5MB
         if (sizeInBytes > maxSize) {
           const sizeMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              error: `第${i + 1}张图片大小为${sizeMB}MB，超过5MB限制`,
-              code: 'IMAGE_TOO_LARGE',
-              size: sizeMB
-            })
-          };
+          return new Response(JSON.stringify({
+            success: false,
+            error: `第${i + 1}张图片大小为${sizeMB}MB，超过5MB限制`,
+            code: 'IMAGE_TOO_LARGE',
+            size: sizeMB
+          }), {
+            status: 400,
+            headers
+          });
         }
       }
     }
 
     // 验证验证码
     if (!validateCaptcha(captcha, captchaAnswer)) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: '验证码错误'
-        })
-      };
+      return new Response(JSON.stringify({
+        success: false,
+        error: '验证码错误'
+      }), {
+        status: 400,
+        headers
+      });
     }
 
     // 获取客户端信息
@@ -155,32 +147,29 @@ export default async function handler(event, context) {
     }, ip, userAgent);
 
     if (result.success) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          message: 'CTO黑历史添加成功',
-          data: result.data
-        })
-      };
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'CTO黑历史添加成功',
+        data: result.data
+      }), {
+        status: 200,
+        headers
+      });
     } else {
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify(result)
-      };
+      return new Response(JSON.stringify(result), {
+        status: 500,
+        headers
+      });
     }
 
   } catch (error) {
     console.error('添加CTO黑历史失败:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        error: '服务器内部错误'
-      })
-    };
+    return new Response(JSON.stringify({
+      success: false,
+      error: '服务器内部错误'
+    }), {
+      status: 500,
+      headers
+    });
   }
 }

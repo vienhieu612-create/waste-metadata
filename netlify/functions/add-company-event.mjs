@@ -30,21 +30,20 @@ export default async function handler(event, context) {
   };
 
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return new Response('', { status: 200, headers });
   }
 
   try {
     if (event.httpMethod !== 'POST') {
-      return {
-        statusCode: 405,
-        headers,
-        body: JSON.stringify({ 
-          success: false,
-          error: `不支持${event.httpMethod}请求方法，只支持POST请求`,
-          code: 'METHOD_NOT_ALLOWED',
-          allowedMethods: ['POST']
-        })
-      };
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: `不支持${event.httpMethod}请求方法，只支持POST请求`,
+        code: 'METHOD_NOT_ALLOWED',
+        allowedMethods: ['POST']
+      }), {
+        status: 405,
+        headers
+      });
     }
 
     const body = JSON.parse(event.body || '{}');
@@ -57,71 +56,66 @@ export default async function handler(event, context) {
       if (!description) missingFields.push('描述');
       if (!severity) missingFields.push('严重程度');
       
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: `以下字段为必填项：${missingFields.join('、')}`,
-          code: 'MISSING_REQUIRED_FIELDS',
-          missingFields
-        })
-      };
+      return new Response(JSON.stringify({
+        success: false,
+        error: `以下字段为必填项：${missingFields.join('、')}`,
+        code: 'MISSING_REQUIRED_FIELDS',
+        missingFields
+      }), {
+        status: 400,
+        headers
+      });
     }
     
     // 验证图片数据
     if (images && Array.isArray(images)) {
       if (images.length > 5) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: '最多只能上传5张图片',
-            code: 'TOO_MANY_IMAGES'
-          })
-        };
+        return new Response(JSON.stringify({
+          success: false,
+          error: '最多只能上传5张图片',
+          code: 'TOO_MANY_IMAGES'
+        }), {
+          status: 400,
+          headers
+        });
       }
       
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
         if (typeof img !== 'string') {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              error: `第${i + 1}张图片数据格式无效`,
-              code: 'INVALID_IMAGE_TYPE'
-            })
-          };
+          return new Response(JSON.stringify({
+            success: false,
+            error: `第${i + 1}张图片数据格式无效`,
+            code: 'INVALID_IMAGE_TYPE'
+          }), {
+            status: 400,
+            headers
+          });
         }
         
         if (!img.startsWith('data:image/')) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              error: `第${i + 1}张图片不是有效的base64图片格式`,
-              code: 'INVALID_IMAGE_FORMAT'
-            })
-          };
+          return new Response(JSON.stringify({
+            success: false,
+            error: `第${i + 1}张图片不是有效的base64图片格式`,
+            code: 'INVALID_IMAGE_FORMAT'
+          }), {
+            status: 400,
+            headers
+          });
         }
         
         // 检查支持的图片格式
         const supportedFormats = ['data:image/jpeg', 'data:image/jpg', 'data:image/png', 'data:image/gif'];
         const isSupported = supportedFormats.some(format => img.startsWith(format));
         if (!isSupported) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              error: `第${i + 1}张图片格式不支持，只支持 JPG、PNG、GIF 格式`,
-              code: 'UNSUPPORTED_IMAGE_FORMAT'
-            })
-          };
+          return new Response(JSON.stringify({
+             success: false,
+             error: `第${i + 1}张图片格式不支持，只支持 JPG、PNG、GIF 格式`,
+             code: 'UNSUPPORTED_IMAGE_FORMAT'
+           }), {
+             status: 400,
+             headers
+           });
         }
         
         // 检查base64图片大小（大约每MB约1.33倍）
@@ -129,16 +123,15 @@ export default async function handler(event, context) {
         const maxSize = 5 * 1024 * 1024; // 5MB
         if (base64Size > maxSize) {
           const sizeMB = (base64Size / (1024 * 1024)).toFixed(2);
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              error: `第${i + 1}张图片大小为${sizeMB}MB，超过5MB限制`,
-              code: 'IMAGE_TOO_LARGE',
-              size: sizeMB
-            })
-          };
+          return new Response(JSON.stringify({
+            success: false,
+            error: `第${i + 1}张图片大小为${sizeMB}MB，超过5MB限制`,
+            code: 'IMAGE_TOO_LARGE',
+            size: sizeMB
+          }), {
+            status: 400,
+            headers
+          });
         }
       }
     }
@@ -146,41 +139,38 @@ export default async function handler(event, context) {
     // 验证严重程度
     const validSeverities = ['低', '中', '高', '极高'];
     if (!validSeverities.includes(severity)) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: `严重程度必须是以下之一：${validSeverities.join('、')}`,
-          code: 'INVALID_SEVERITY',
-          validSeverities
-        })
-      };
+      return new Response(JSON.stringify({
+        success: false,
+        error: `严重程度必须是以下之一：${validSeverities.join('、')}`,
+        code: 'INVALID_SEVERITY',
+        validSeverities
+      }), {
+        status: 400,
+        headers
+      });
     }
 
     // 验证验证码
     if (!captcha || !captchaAnswer) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: '验证码和验证码答案不能为空',
-          code: 'CAPTCHA_REQUIRED'
-        })
-      };
+      return new Response(JSON.stringify({
+        success: false,
+        error: '验证码和验证码答案不能为空',
+        code: 'CAPTCHA_REQUIRED'
+      }), {
+        status: 400,
+        headers
+      });
     }
     
     if (!validateCaptcha(captcha, captchaAnswer)) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: '验证码错误，请重新输入',
-          code: 'CAPTCHA_INVALID'
-        })
-      };
+      return new Response(JSON.stringify({
+        success: false,
+        error: '验证码错误，请重新输入',
+        code: 'CAPTCHA_INVALID'
+      }), {
+        status: 400,
+        headers
+      });
     }
 
     // 获取客户端信息
@@ -208,25 +198,23 @@ export default async function handler(event, context) {
     }, ip, userAgent);
 
     if (result.success) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          message: '事件添加成功',
-          data: result.data
-        })
-      };
+      return new Response(JSON.stringify({
+        success: true,
+        message: '事件添加成功',
+        data: result.data
+      }), {
+        status: 200,
+        headers
+      });
     } else {
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: result.error || '添加事件失败',
-          code: 'DATABASE_ERROR'
-        })
-      };
+      return new Response(JSON.stringify({
+        success: false,
+        error: result.error || '添加事件失败',
+        code: 'DATABASE_ERROR'
+      }), {
+        status: 500,
+        headers
+      });
     }
 
   } catch (error) {
@@ -247,15 +235,14 @@ export default async function handler(event, context) {
       errorCode = 'NETWORK_ERROR';
     }
     
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        error: errorMessage,
-        code: errorCode,
-        timestamp: new Date().toISOString()
-      })
-    };
+    return new Response(JSON.stringify({
+      success: false,
+      error: errorMessage,
+      code: errorCode,
+      timestamp: new Date().toISOString()
+    }), {
+      status: 500,
+      headers
+    });
   }
 }
