@@ -1400,12 +1400,35 @@ function showNotification(message, type = 'info') {
 }
 
 // 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', function() {
-    setupEventListeners();
-    updateViewCount();
-    loadCompanyEvents();
-    loadCtoHistory();
-    loadComments();
-    setupFormValidation();
-    setupImageUpload();
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        setupEventListeners();
+        updateViewCount();
+        
+        // 并行加载所有数据
+        await Promise.all([
+            loadCompanyEvents(),
+            loadCtoHistory(),
+            loadComments()
+        ]);
+        
+        setupFormValidation();
+        setupImageUpload();
+        
+        // 隐藏初始加载页面
+        const initialLoading = document.getElementById('loading');
+        if (initialLoading) {
+            initialLoading.style.display = 'none';
+        }
+        
+        console.log('页面初始化完成');
+    } catch (error) {
+        console.error('页面初始化失败:', error);
+        // 即使出错也要隐藏loading
+        const initialLoading = document.getElementById('loading');
+        if (initialLoading) {
+            initialLoading.style.display = 'none';
+        }
+        showError('页面加载失败，请刷新重试');
+    }
 });
