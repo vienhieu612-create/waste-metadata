@@ -7,7 +7,7 @@ const images = [];
 // API服务配置
 const API_CONFIG = {
     // Netlify Functions API端点
-    LOG_VIEW: '/.netlify/functions/log-page-view',
+    LOG_VIEW: '/.netlify/functions/log-view',
     GET_STATS: '/.netlify/functions/get-page-stats',
     GET_COMPANY_EVENTS: '/.netlify/functions/get-company-events',
     ADD_COMPANY_EVENT: '/.netlify/functions/add-company-event',
@@ -707,15 +707,16 @@ function renderCompanyEvents(events) {
                 <div class="event-number">${index + 1}️⃣</div>
                 <h3>${escapeHtml(event.title)}</h3>
             </div>
-            ${event.images && event.images.length > 0 ? `
-                <div class="event-images">
-                    ${event.images.map(img => `
+            <div class="event-images">
+                ${event.images && event.images.length > 0 ? 
+                    event.images.map(img => `
                         <div class="event-image">
-                            <img src="${escapeHtml(img)}" alt="${escapeHtml(event.title)}" onerror="this.style.display='none'">
+                            <img src="${escapeHtml(img)}" alt="${escapeHtml(event.title)}" onclick="openImageModal('${escapeHtml(img)}', '${escapeHtml(event.title)}')" onerror="this.style.display='none'">
                         </div>
-                    `).join('')}
-                </div>
-            ` : ''}
+                    `).join('') : 
+                    '<div class="event-image-placeholder">暂无图片</div>'
+                }
+            </div>
             <p class="event-description">${escapeHtml(event.description)}</p>
             <div class="event-meta">
                 <span class="severity ${getSeverityClass(event.severity)}">严重程度：${event.severity}</span>
@@ -761,15 +762,16 @@ function renderCtoHistory(history) {
             </div>
             <div class="cto-content">
                 <p class="cto-description">${escapeHtml(item.description)}</p>
-                ${item.images && item.images.length > 0 ? `
-                    <div class="cto-images">
-                        ${item.images.map(img => `
+                <div class="cto-images">
+                    ${item.images && item.images.length > 0 ? 
+                        item.images.map(img => `
                             <div class="cto-image">
-                                <img src="${escapeHtml(img)}" alt="CTO黑历史图片" onerror="this.style.display='none'">
+                                <img src="${escapeHtml(img)}" alt="CTO黑历史图片" onclick="openImageModal('${escapeHtml(img)}', 'CTO黑历史图片')" onerror="this.style.display='none'">
                             </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
+                        `).join('') : 
+                        '<div class="cto-image-placeholder">暂无图片</div>'
+                    }
+                </div>
             </div>
             <div class="cto-meta">
                 发布时间：${formatDate(item.created_at)}
@@ -1344,13 +1346,18 @@ function getPreviewImages(containerId) {
         const base64Data = img.src;
         const mimeType = img.getAttribute('data-mime-type') || 'image/jpeg';
         
-        // 提取base64数据部分（去掉data:image/xxx;base64,前缀）
-        const base64String = base64Data.split(',')[1] || base64Data;
-        
-        images.push({
-            data: base64String,
-            type: mimeType
-        });
+        // 根据容器ID决定返回格式
+        if (containerId === 'eventImagePreview') {
+            // 公司事件期望完整的data:image/xxx;base64,xxx格式
+            images.push(base64Data);
+        } else {
+            // CTO黑历史期望{data: base64String, type: mimeType}格式
+            const base64String = base64Data.split(',')[1] || base64Data;
+            images.push({
+                data: base64String,
+                type: mimeType
+            });
+        }
     });
     
     return images;
@@ -1471,6 +1478,42 @@ function showNotification(message, type = 'info') {
         }
     }, type === 'error' ? 6000 : 3000);
 }
+
+// 图片放大模态框功能
+function openImageModal(imageSrc, imageAlt) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    
+    if (modal && modalImage) {
+        modalImage.src = imageSrc;
+        modalImage.alt = imageAlt || '图片';
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// 点击模态框背景关闭
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('imageModal');
+    if (e.target === modal) {
+        closeImageModal();
+    }
+});
+
+// ESC键关闭模态框
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeImageModal();
+    }
+});
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', async function() {
