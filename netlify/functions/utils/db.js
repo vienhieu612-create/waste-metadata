@@ -237,16 +237,28 @@ function processImagesForStorage(images) {
   const maxImages = 5;
   
   return images.slice(0, maxImages).map((img, index) => {
-    if (typeof img !== 'string' || !img.startsWith('data:image/')) {
+    let imageData = '';
+    let mimeType = '';
+    
+    // 处理两种格式的图片数据
+    if (typeof img === 'string' && img.startsWith('data:image/')) {
+      // 格式1: 完整的data:image/xxx;base64,xxx字符串（公司事件）
+      imageData = img;
+      const formatMatch = img.match(/data:image\/(\w+);/);
+      mimeType = formatMatch ? `image/${formatMatch[1]}` : 'image/jpeg';
+    } else if (typeof img === 'object' && img.data && img.type) {
+      // 格式2: {data: base64String, type: mimeType}对象（CTO黑历史）
+      imageData = `data:${img.type};base64,${img.data}`;
+      mimeType = img.type;
+    } else {
       return null;
     }
     
     // 如果图片过大，返回压缩提示而不是完整数据
-    const estimatedSize = img.length * 0.75;
+    const estimatedSize = imageData.length * 0.75;
     if (estimatedSize > maxImageSize) {
       // 提取图片格式信息
-      const formatMatch = img.match(/data:image\/(\w+);/);
-      const format = formatMatch ? formatMatch[1].toUpperCase() : 'UNKNOWN';
+      const format = mimeType.split('/')[1]?.toUpperCase() || 'UNKNOWN';
       
       return {
         type: 'large_image_placeholder',
@@ -256,7 +268,7 @@ function processImagesForStorage(images) {
       };
     }
     
-    return img;
+    return imageData;
   }).filter(img => img !== null);
 }
 
