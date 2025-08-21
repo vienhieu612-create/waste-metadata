@@ -4,36 +4,20 @@ let currentImageIndex = 0;
 const totalImages = 15;
 const images = [];
 
-// 模拟第三方API服务配置
+// API服务配置
 const API_CONFIG = {
-    // 这里可以替换为真实的第三方API服务
-    VIEW_API: 'https://api.example.com/views'
+    // Netlify Functions API端点
+    LOG_VIEW: '/api/log-view',
+    GET_STATS: '/api/get-stats',
+    GET_COMPANY_EVENTS: '/api/get-company-events',
+    ADD_COMPANY_EVENT: '/api/add-company-event',
+    GET_CTO_HISTORY: '/api/get-cto-history',
+    ADD_CTO_HISTORY: '/api/add-cto-history',
+    GET_COMMENTS: '/api/get-comments',
+    ADD_COMMENT: '/api/add-comment'
 };
 
-// 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', function() {
-    initializePage();
-    setupEventListeners();
-    loadInitialData();
-    initializeCarousel();
-});
 
-// 初始化页面
-function initializePage() {
-    // 隐藏加载动画
-    setTimeout(() => {
-        const loading = document.getElementById('loading');
-        if (loading) {
-            loading.style.display = 'none';
-        }
-    }, 1000);
-
-    // 更新阅读量
-    updateViewCount();
-    
-    // 从本地存储恢复状态
-    restoreState();
-}
 
 // 设置事件监听器
 function setupEventListeners() {
@@ -47,10 +31,30 @@ function setupEventListeners() {
     setupImageViewer();
 }
 
+// 设置滚动动画
+function setupScrollAnimations() {
+    const animatedElements = document.querySelectorAll('.event-card, .warning-quote, .carousel-container, .warning-item, .cto-card, .comment-item');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate');
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    animatedElements.forEach(el => observer.observe(el));
+}
+
 // 初始化走马灯
 function initializeCarousel() {
     const carouselTrack = document.getElementById('carouselTrack');
     const thumbnailsContainer = document.getElementById('thumbnails');
+    
+    // 检查元素是否存在
+    if (!carouselTrack || !thumbnailsContainer) {
+        console.warn('走马灯元素不存在，跳过初始化');
+        return;
+    }
     
     // 生成图片列表
     for (let i = 1; i <= totalImages; i++) {
@@ -82,18 +86,22 @@ function setupCarouselControls() {
     const nextBtn = document.getElementById('nextBtn');
     const thumbnails = document.querySelectorAll('.thumbnail');
     
-    // 上一张/下一张按钮
-    prevBtn.addEventListener('click', () => {
-        currentImageIndex = (currentImageIndex - 1 + totalImages) % totalImages;
-        updateCarousel();
-        updateThumbnails();
-    });
+    // 检查元素是否存在
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            currentImageIndex = (currentImageIndex - 1 + totalImages) % totalImages;
+            updateCarousel();
+            updateThumbnails();
+        });
+    }
     
-    nextBtn.addEventListener('click', () => {
-        currentImageIndex = (currentImageIndex + 1) % totalImages;
-        updateCarousel();
-        updateThumbnails();
-    });
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            currentImageIndex = (currentImageIndex + 1) % totalImages;
+            updateCarousel();
+            updateThumbnails();
+        });
+    }
     
     // 缩略图点击
     thumbnails.forEach(thumbnail => {
@@ -140,34 +148,45 @@ function setupImageViewer() {
     });
     
     // 关闭查看器
-    viewerClose.addEventListener('click', closeImageViewer);
-    imageViewer.addEventListener('click', (e) => {
-        if (e.target === imageViewer) {
-            closeImageViewer();
-        }
-    });
+    if (viewerClose) {
+        viewerClose.addEventListener('click', closeImageViewer);
+    }
+    
+    if (imageViewer) {
+        imageViewer.addEventListener('click', (e) => {
+            if (e.target === imageViewer) {
+                closeImageViewer();
+            }
+        });
+    }
     
     // 查看器内切换图片
-    viewerPrev.addEventListener('click', (e) => {
-        e.stopPropagation(); // 防止触发关闭
-        currentImageIndex = (currentImageIndex - 1 + totalImages) % totalImages;
-        updateViewerImage();
-        updateCarousel();
-        updateThumbnails();
-    });
+    if (viewerPrev) {
+        viewerPrev.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止触发关闭
+            currentImageIndex = (currentImageIndex - 1 + totalImages) % totalImages;
+            updateViewerImage();
+            updateCarousel();
+            updateThumbnails();
+        });
+    }
     
-    viewerNext.addEventListener('click', (e) => {
-        e.stopPropagation(); // 防止触发关闭
-        currentImageIndex = (currentImageIndex + 1) % totalImages;
-        updateViewerImage();
-        updateCarousel();
-        updateThumbnails();
-    });
+    if (viewerNext) {
+        viewerNext.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止触发关闭
+            currentImageIndex = (currentImageIndex + 1) % totalImages;
+            updateViewerImage();
+            updateCarousel();
+            updateThumbnails();
+        });
+    }
     
     // 防止图片点击事件冒泡
-    viewerImage.addEventListener('click', (e) => {
-        e.stopPropagation();
-    });
+    if (viewerImage) {
+        viewerImage.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
 }
 
 // 更新走马灯
@@ -176,10 +195,14 @@ function updateCarousel() {
     const currentImage = document.getElementById('currentImage');
     
     // 移动轨道
-    carouselTrack.style.transform = `translateX(-${currentImageIndex * 100}%)`;
+    if (carouselTrack) {
+        carouselTrack.style.transform = `translateX(-${currentImageIndex * 100}%)`;
+    }
     
     // 更新计数器
-    currentImage.textContent = currentImageIndex + 1;
+    if (currentImage) {
+        currentImage.textContent = currentImageIndex + 1;
+    }
 }
 
 // 更新缩略图
@@ -201,6 +224,11 @@ function openImageViewer(index) {
     const viewerImage = document.getElementById('viewerImage');
     const viewerCounter = document.getElementById('viewerCounter');
     
+    if (!imageViewer || !viewerImage || !viewerCounter) {
+        console.warn('图片查看器元素不存在');
+        return;
+    }
+    
     currentImageIndex = index;
     viewerCounter.textContent = `${index + 1} / ${totalImages}`;
     imageViewer.classList.add('active');
@@ -219,10 +247,12 @@ function openImageViewer(index) {
 // 关闭图片查看器
 function closeImageViewer() {
     const imageViewer = document.getElementById('imageViewer');
-    imageViewer.classList.remove('active');
-    
-    // 恢复背景滚动
-    document.body.style.overflow = '';
+    if (imageViewer) {
+        imageViewer.classList.remove('active');
+        
+        // 恢复背景滚动
+        document.body.style.overflow = '';
+    }
 }
 
 // 更新查看器图片
@@ -230,19 +260,30 @@ function updateViewerImage() {
     const viewerImage = document.getElementById('viewerImage');
     const viewerCounter = document.getElementById('viewerCounter');
     
-    viewerImage.src = images[currentImageIndex];
-    viewerCounter.textContent = `${currentImageIndex + 1} / ${totalImages}`;
+    if (viewerImage) {
+        viewerImage.src = images[currentImageIndex];
+    }
+    
+    if (viewerCounter) {
+        viewerCounter.textContent = `${currentImageIndex + 1} / ${totalImages}`;
+    }
 }
 
 // 更新阅读量
-function updateViewCount() {
+async function updateViewCount() {
     viewCount++;
-    document.getElementById('viewCount').textContent = viewCount;
+    const viewCountElement = document.getElementById('viewCount');
+    if (viewCountElement) {
+        viewCountElement.textContent = viewCount;
+    }
     
-    // 发送到API（模拟）
-    sendViewToAPI().catch(error => {
-        console.log('阅读量API调用失败');
-    });
+    // 发送到数据库API
+    try {
+        await logPageView();
+        console.log('页面访问记录成功');
+    } catch (error) {
+        console.log('页面访问记录失败:', error);
+    }
 }
 
 // 设置滚动动画
@@ -262,7 +303,7 @@ function setupScrollAnimations() {
     }, observerOptions);
     
     // 观察所有需要动画的元素
-    const animatedElements = document.querySelectorAll('.event-card, .warning-quote, .carousel-container, .warning-item');
+    const animatedElements = document.querySelectorAll('.event-card, .warning-quote, .carousel-container, .warning-item, .cto-card, .comment-item');
     animatedElements.forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(30px)';
@@ -307,7 +348,10 @@ function restoreState() {
 
 // 根据状态更新UI
 function updateUIFromState() {
-    document.getElementById('viewCount').textContent = viewCount;
+    const viewCountElement = document.getElementById('viewCount');
+    if (viewCountElement) {
+        viewCountElement.textContent = viewCount;
+    }
     if (images.length > 0) {
         updateCarousel();
         updateThumbnails();
@@ -395,15 +439,182 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// API调用函数（模拟）
-async function sendViewToAPI() {
-    // 模拟API调用
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            console.log('阅读量已发送到API');
-            resolve();
-        }, 200);
+// API调用函数
+async function logPageView() {
+    const response = await fetch(API_CONFIG.LOG_VIEW, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            pageUrl: window.location.href,
+            referrer: document.referrer
+        })
     });
+    
+    if (!response.ok) {
+        throw new Error('网络请求失败');
+    }
+    
+    return await response.json();
+}
+
+async function getPageStats() {
+    const response = await fetch(API_CONFIG.GET_STATS, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error('网络请求失败');
+    }
+    
+    return await response.json();
+}
+
+// 生成验证码
+function generateCaptcha() {
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let result = '';
+    for (let i = 0; i < 4; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+// 生成数学验证码
+function generateMathCaptcha(captchaId, answerId) {
+    const num1 = Math.floor(Math.random() * 10) + 1;
+    const num2 = Math.floor(Math.random() * 10) + 1;
+    const operators = ['+', '-', '*'];
+    const operator = operators[Math.floor(Math.random() * operators.length)];
+    
+    let question, answer;
+    switch(operator) {
+        case '+':
+            question = `${num1} + ${num2} = ?`;
+            answer = num1 + num2;
+            break;
+        case '-':
+            question = `${num1} - ${num2} = ?`;
+            answer = num1 - num2;
+            break;
+        case '*':
+            question = `${num1} × ${num2} = ?`;
+            answer = num1 * num2;
+            break;
+    }
+    
+    const captchaElement = document.getElementById(captchaId);
+    const answerElement = document.getElementById(answerId);
+    
+    if (captchaElement) {
+        captchaElement.textContent = question;
+    }
+    if (answerElement) {
+        answerElement.value = answer;
+    }
+}
+
+// 获取公司事件列表
+async function getCompanyEvents(page = 1, limit = 6) {
+    const response = await fetch(`${API_CONFIG.GET_COMPANY_EVENTS}?page=${page}&limit=${limit}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error('网络请求失败');
+    }
+    
+    return await response.json();
+}
+
+// 添加公司事件
+async function addCompanyEvent(data) {
+    const response = await fetch(API_CONFIG.ADD_COMPANY_EVENT, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+        throw new Error('网络请求失败');
+    }
+    
+    return await response.json();
+}
+
+// 获取CTO黑历史列表
+async function getCtoHistory(page = 1, limit = 6) {
+    const response = await fetch(`${API_CONFIG.GET_CTO_HISTORY}?page=${page}&limit=${limit}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error('网络请求失败');
+    }
+    
+    return await response.json();
+}
+
+// 添加CTO黑历史
+async function addCtoHistory(data) {
+    const response = await fetch(API_CONFIG.ADD_CTO_HISTORY, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+        throw new Error('网络请求失败');
+    }
+    
+    return await response.json();
+}
+
+// 获取评论列表
+async function getComments(page = 1, limit = 10) {
+    const response = await fetch(`${API_CONFIG.GET_COMMENTS}?page=${page}&limit=${limit}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error('网络请求失败');
+    }
+    
+    return await response.json();
+}
+
+// 添加评论
+async function addComment(data) {
+    const response = await fetch(API_CONFIG.ADD_COMMENT, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+        throw new Error('网络请求失败');
+    }
+    
+    return await response.json();
 }
 
 // 页面可见性变化处理
@@ -422,4 +633,779 @@ window.addEventListener('error', function(event) {
 // 未处理的Promise拒绝
 window.addEventListener('unhandledrejection', function(event) {
     console.error('未处理的Promise拒绝:', event.reason);
+});
+
+// 全局变量
+let currentEventsPage = 1;
+let currentCtoPage = 1;
+let currentCommentsPage = 1;
+let eventCaptchaAnswer = '';
+let ctoCaptchaAnswer = '';
+let commentCaptchaAnswer = '';
+
+// 加载公司事件
+async function loadCompanyEvents(page = 1) {
+    try {
+        showLoading();
+        const result = await getCompanyEvents(page, 6);
+        if (result.success) {
+            renderCompanyEvents(result.data.events);
+            renderPagination('eventsPagination', result.data.pagination, loadCompanyEvents);
+            currentEventsPage = page;
+        } else {
+            showError('加载公司事件失败');
+        }
+    } catch (error) {
+        console.error('加载公司事件失败:', error);
+        showError('加载公司事件失败');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 渲染公司事件
+function renderCompanyEvents(events) {
+    const container = document.getElementById('eventsGrid');
+    if (!container) return;
+    
+    if (events.length === 0) {
+        container.innerHTML = '<div class="no-data">暂无数据</div>';
+        return;
+    }
+    
+    container.innerHTML = events.map((event, index) => `
+        <div class="event-card animate">
+            <div class="event-header">
+                <div class="event-number">${index + 1}️⃣</div>
+                <h3>${escapeHtml(event.title)}</h3>
+            </div>
+            ${event.images && event.images.length > 0 ? `
+                <div class="event-images">
+                    ${event.images.map(img => `
+                        <div class="event-image">
+                            <img src="${escapeHtml(img)}" alt="${escapeHtml(event.title)}" onerror="this.style.display='none'">
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            <p class="event-description">${escapeHtml(event.description)}</p>
+            <div class="event-meta">
+                <span class="severity ${getSeverityClass(event.severity)}">严重程度：${event.severity}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 加载CTO黑历史
+async function loadCtoHistory(page = 1) {
+    try {
+        showLoading();
+        const result = await getCtoHistory(page, 6);
+        if (result.success) {
+            renderCtoHistory(result.data.history);
+            renderPagination('ctoPagination', result.data.pagination, loadCtoHistory);
+            currentCtoPage = page;
+        } else {
+            showError('加载CTO黑历史失败');
+        }
+    } catch (error) {
+        console.error('加载CTO黑历史失败:', error);
+        showError('加载CTO黑历史失败');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 渲染CTO黑历史
+function renderCtoHistory(history) {
+    const container = document.getElementById('ctoHistoryGrid');
+    if (!container) return;
+    
+    if (history.length === 0) {
+        container.innerHTML = '<div class="no-data">暂无数据</div>';
+        return;
+    }
+    
+    container.innerHTML = history.map(item => `
+        <div class="cto-card animate">
+            <div class="cto-header">
+                <h3 class="cto-title">${escapeHtml(item.title)}</h3>
+            </div>
+            <div class="cto-content">
+                <p class="cto-description">${escapeHtml(item.description)}</p>
+                ${item.images && item.images.length > 0 ? `
+                    <div class="cto-images">
+                        ${item.images.map(img => `
+                            <div class="cto-image">
+                                <img src="${escapeHtml(img)}" alt="CTO黑历史图片" onerror="this.style.display='none'">
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+            <div class="cto-meta">
+                发布时间：${formatDate(item.created_at)}
+            </div>
+        </div>
+    `).join('');
+}
+
+// 加载评论
+async function loadComments(page = 1) {
+    try {
+        showLoading();
+        const result = await getComments(page, 10);
+        if (result.success) {
+            renderComments(result.data.comments);
+            renderPagination('commentsPagination', result.data.pagination, loadComments);
+            currentCommentsPage = page;
+        } else {
+            showError('加载评论失败');
+        }
+    } catch (error) {
+        console.error('加载评论失败:', error);
+        showError('加载评论失败');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 渲染评论
+function renderComments(comments) {
+    const container = document.getElementById('commentsList');
+    if (!container) return;
+    
+    if (comments.length === 0) {
+        container.innerHTML = '<div class="no-data">暂无评论</div>';
+        return;
+    }
+    
+    container.innerHTML = comments.map(comment => `
+        <div class="comment-item animate">
+            <div class="comment-header">
+                <span class="comment-author">${escapeHtml(comment.author)}</span>
+                <span class="comment-time">${formatDate(comment.created_at)}</span>
+            </div>
+            <div class="comment-content">${escapeHtml(comment.content)}</div>
+        </div>
+    `).join('');
+}
+
+// 渲染分页
+function renderPagination(containerId, pagination, loadFunction) {
+    const container = document.getElementById(containerId);
+    if (!container || !pagination) return;
+    
+    const { current, total, hasNext, hasPrev } = pagination;
+    
+    let html = '';
+    
+    if (hasPrev) {
+        html += `<button onclick="${loadFunction.name}(${current - 1})">上一页</button>`;
+    }
+    
+    for (let i = Math.max(1, current - 2); i <= Math.min(total, current + 2); i++) {
+        html += `<button class="${i === current ? 'active' : ''}" onclick="${loadFunction.name}(${i})">${i}</button>`;
+    }
+    
+    if (hasNext) {
+        html += `<button onclick="${loadFunction.name}(${current + 1})">下一页</button>`;
+    }
+    
+    container.innerHTML = html;
+}
+
+// 显示添加事件表单
+function showAddEventForm() {
+    eventCaptchaAnswer = generateCaptcha();
+    const eventCaptchaText = document.getElementById('eventCaptchaText');
+    const addEventModal = document.getElementById('addEventModal');
+    
+    if (eventCaptchaText) {
+        eventCaptchaText.textContent = eventCaptchaAnswer;
+    }
+    
+    if (addEventModal) {
+        addEventModal.classList.add('active');
+    }
+}
+
+// 显示添加CTO表单
+function showAddCtoForm() {
+    ctoCaptchaAnswer = generateCaptcha();
+    const ctoCaptchaText = document.getElementById('ctoCaptchaText');
+    const addCtoModal = document.getElementById('addCtoModal');
+    
+    if (ctoCaptchaText) {
+        ctoCaptchaText.textContent = ctoCaptchaAnswer;
+    }
+    
+    if (addCtoModal) {
+        addCtoModal.classList.add('active');
+    }
+}
+
+// 关闭模态框
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// 刷新验证码
+function refreshEventCaptcha() {
+    eventCaptchaAnswer = generateCaptcha();
+    const eventCaptchaText = document.getElementById('eventCaptchaText');
+    if (eventCaptchaText) {
+        eventCaptchaText.textContent = eventCaptchaAnswer;
+    }
+    // 清空用户输入
+    const input = document.querySelector('#addEventModal input[name="captcha"]');
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+}
+
+function refreshCtoCaptcha() {
+    ctoCaptchaAnswer = generateCaptcha();
+    const ctoCaptchaText = document.getElementById('ctoCaptchaText');
+    if (ctoCaptchaText) {
+        ctoCaptchaText.textContent = ctoCaptchaAnswer;
+    }
+    // 清空用户输入
+    const input = document.querySelector('#addCtoModal input[name="captcha"]');
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+}
+
+function refreshCommentCaptcha() {
+    commentCaptchaAnswer = generateCaptcha();
+    const commentCaptchaText = document.getElementById('commentCaptchaText');
+    if (commentCaptchaText) {
+        commentCaptchaText.textContent = commentCaptchaAnswer;
+    }
+    // 清空用户输入
+    const input = document.querySelector('#commentForm input[name="captcha"]');
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+}
+
+// 设置表单验证
+function setupFormValidation() {
+    // 评论表单
+    const commentForm = document.getElementById('commentForm');
+    const commentContent = document.getElementById('commentContent');
+    const commentCharCount = document.getElementById('commentCharCount');
+    
+    if (commentContent && commentCharCount) {
+        commentContent.addEventListener('input', function() {
+            commentCharCount.textContent = this.value.length;
+        });
+    }
+    
+    if (commentForm) {
+        commentForm.addEventListener('submit', handleCommentSubmit);
+    }
+    
+    // 事件表单
+    const eventForm = document.getElementById('addEventForm');
+    const eventDescription = document.getElementById('eventDescription');
+    const eventCharCount = document.getElementById('eventCharCount');
+    
+    if (eventDescription && eventCharCount) {
+        eventDescription.addEventListener('input', function() {
+            eventCharCount.textContent = this.value.length;
+        });
+    }
+    
+    if (eventForm) {
+        eventForm.addEventListener('submit', handleEventSubmit);
+    }
+    
+    // CTO表单
+    const ctoForm = document.getElementById('addCtoForm');
+    if (ctoForm) {
+        ctoForm.addEventListener('submit', handleCtoSubmit);
+    }
+    
+    // 设置图片上传
+    setupImageUpload();
+    
+    // 初始化验证码
+    refreshCommentCaptcha();
+}
+
+// 处理评论提交
+async function handleCommentSubmit(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const data = {
+        author: formData.get('author'),
+        content: formData.get('content'),
+        captcha: formData.get('captcha'),
+        captchaAnswer: commentCaptchaAnswer
+    };
+    
+    try {
+        const result = await addComment(data);
+        if (result.success) {
+            showSuccess('评论发表成功');
+            event.target.reset();
+            const commentCharCount = document.getElementById('commentCharCount');
+            if (commentCharCount) {
+                commentCharCount.textContent = '0';
+            }
+            refreshCommentCaptcha();
+            loadComments(1);
+        } else {
+            // 根据错误代码显示不同的错误信息
+            let errorMessage = result.error || '评论发表失败';
+            
+            switch (result.code) {
+                case 'CAPTCHA_INVALID':
+                    errorMessage = '验证码错误，请重新输入';
+                    refreshCommentCaptcha();
+                    break;
+                case 'CONTENT_TOO_LONG':
+                    errorMessage = `评论内容过长（${result.length}字符），请控制在${result.maxLength}字符以内`;
+                    break;
+                case 'CONTENT_TOO_SHORT':
+                    errorMessage = `评论内容过短，请至少输入${result.minLength}个字符`;
+                    break;
+                case 'AUTHOR_NAME_INVALID':
+                    errorMessage = '昵称格式不正确，请使用2-20个字符';
+                    break;
+                case 'MISSING_REQUIRED_FIELDS':
+                    if (result.missingFields) {
+                        errorMessage = `请填写以下必填字段：${result.missingFields.join('、')}`;
+                    }
+                    break;
+                case 'RATE_LIMIT_EXCEEDED':
+                    errorMessage = '评论过于频繁，请稍后再试';
+                    break;
+            }
+            
+            showError(errorMessage);
+        }
+    } catch (error) {
+        console.error('评论提交失败:', error);
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            showError('网络连接失败，请检查网络后重试');
+        } else if (error.message.includes('timeout')) {
+            showError('请求超时，请稍后重试');
+        } else {
+            showError('网络错误，请稍后重试');
+        }
+    }
+}
+
+// 处理事件提交
+async function handleEventSubmit(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const images = getPreviewImages('eventImagePreview');
+    
+    const data = {
+        title: formData.get('title'),
+        description: formData.get('description'),
+        severity: formData.get('severity'),
+        images: images,
+        captcha: formData.get('captcha'),
+        captchaAnswer: eventCaptchaAnswer
+    };
+    
+    try {
+        const result = await addCompanyEvent(data);
+        if (result.success) {
+            showSuccess('事件添加成功');
+            closeModal('addEventModal');
+            event.target.reset();
+            clearImagePreview('eventImagePreview');
+            const eventCharCount = document.getElementById('eventCharCount');
+            if (eventCharCount) {
+                eventCharCount.textContent = '0';
+            }
+            loadCompanyEvents(1);
+        } else {
+            // 根据错误代码显示不同的错误信息
+            let errorMessage = result.error || '事件添加失败';
+            
+            switch (result.code) {
+                case 'TOO_MANY_IMAGES':
+                    errorMessage = '最多只能上传5张图片，请删除多余的图片';
+                    break;
+                case 'IMAGE_TOO_LARGE':
+                    errorMessage = `图片过大（${result.size}MB），请压缩后重新上传`;
+                    break;
+                case 'UNSUPPORTED_IMAGE_FORMAT':
+                    errorMessage = '图片格式不支持，请使用JPG、PNG或GIF格式';
+                    break;
+                case 'CAPTCHA_INVALID':
+                    errorMessage = '验证码错误，请重新输入';
+                    refreshEventCaptcha();
+                    break;
+                case 'MISSING_REQUIRED_FIELDS':
+                    if (result.missingFields) {
+                        errorMessage = `请填写以下必填字段：${result.missingFields.join('、')}`;
+                    }
+                    break;
+            }
+            
+            showError(errorMessage);
+        }
+    } catch (error) {
+        console.error('事件提交失败:', error);
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            showError('网络连接失败，请检查网络后重试');
+        } else if (error.message.includes('timeout')) {
+            showError('请求超时，请稍后重试');
+        } else {
+            showError('网络错误，请稍后重试');
+        }
+    }
+}
+
+// 处理CTO提交
+async function handleCtoSubmit(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const images = getPreviewImages('ctoImagePreview');
+    
+    const data = {
+        title: formData.get('title'),
+        description: formData.get('description'),
+        images: images,
+        captcha: formData.get('captcha'),
+        captchaAnswer: ctoCaptchaAnswer
+    };
+    
+    try {
+        const result = await addCtoHistory(data);
+        if (result.success) {
+            showSuccess('CTO黑历史添加成功');
+            closeModal('addCtoModal');
+            event.target.reset();
+            clearImagePreview('ctoImagePreview');
+            loadCtoHistory(1);
+        } else {
+            // 根据错误代码显示不同的错误信息
+            let errorMessage = result.error || 'CTO黑历史添加失败';
+            
+            switch (result.code) {
+                case 'TOO_MANY_IMAGES':
+                    errorMessage = '最多只能上传5张图片，请删除多余的图片';
+                    break;
+                case 'IMAGE_TOO_LARGE':
+                    errorMessage = `图片过大（${result.size}MB），请压缩后重新上传`;
+                    break;
+                case 'UNSUPPORTED_IMAGE_FORMAT':
+                    errorMessage = '图片格式不支持，请使用JPG、PNG或GIF格式';
+                    break;
+                case 'CAPTCHA_INVALID':
+                    errorMessage = '验证码错误，请重新输入';
+                    refreshCtoCaptcha();
+                    break;
+                case 'MISSING_REQUIRED_FIELDS':
+                    if (result.missingFields) {
+                        errorMessage = `请填写以下必填字段：${result.missingFields.join('、')}`;
+                    }
+                    break;
+            }
+            
+            showError(errorMessage);
+        }
+    } catch (error) {
+        console.error('CTO提交失败:', error);
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            showError('网络连接失败，请检查网络后重试');
+        } else if (error.message.includes('timeout')) {
+            showError('请求超时，请稍后重试');
+        } else {
+            showError('网络错误，请稍后重试');
+        }
+    }
+}
+
+// 图片上传相关函数
+function setupImageUpload() {
+    // 事件图片上传
+    const eventImageInput = document.getElementById('eventImages');
+    if (eventImageInput) {
+        eventImageInput.addEventListener('change', function(e) {
+            handleImageUpload(e.target.files, 'eventImagePreview');
+        });
+    }
+    
+    // CTO图片上传
+    const ctoImageInput = document.getElementById('ctoImages');
+    if (ctoImageInput) {
+        ctoImageInput.addEventListener('change', function(e) {
+            handleImageUpload(e.target.files, 'ctoImagePreview');
+        });
+    }
+}
+
+// 处理图片上传
+async function handleImageUpload(files, previewContainerId) {
+    const previewContainer = document.getElementById(previewContainerId);
+    if (!previewContainer) {
+        showError('图片预览容器未找到');
+        return;
+    }
+    
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    const maxImages = 5; // 最多上传5张图片
+    
+    // 检查当前已有图片数量
+    const currentImages = previewContainer.querySelectorAll('.image-preview-item').length;
+    const remainingSlots = maxImages - currentImages;
+    
+    if (remainingSlots <= 0) {
+        showError(`最多只能上传 ${maxImages} 张图片`);
+        return;
+    }
+    
+    if (files.length > remainingSlots) {
+        showError(`还可以上传 ${remainingSlots} 张图片，请重新选择`);
+        return;
+    }
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (let file of files) {
+        // 检查文件类型
+        if (!allowedTypes.includes(file.type)) {
+            showError(`文件 "${file.name}" 格式不支持，只支持 JPG、PNG、GIF 格式`);
+            errorCount++;
+            continue;
+        }
+        
+        // 检查文件大小
+        if (file.size > maxSize) {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            showError(`文件 "${file.name}" 大小为 ${sizeMB}MB，超过 5MB 限制`);
+            errorCount++;
+            continue;
+        }
+        
+        try {
+            showLoading();
+            const base64 = await convertToBase64(file);
+            addImagePreview(base64, previewContainer, file.name);
+            successCount++;
+        } catch (error) {
+            showError(`文件 "${file.name}" 处理失败: ${error.message}`);
+            errorCount++;
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    // 显示处理结果
+    if (successCount > 0) {
+        showSuccess(`成功上传 ${successCount} 张图片`);
+    }
+    if (errorCount > 0) {
+        showError(`${errorCount} 张图片上传失败`);
+    }
+}
+
+// 转换图片为base64
+function convertToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsDataURL(file);
+    });
+}
+
+// 添加图片预览
+function addImagePreview(base64, container, fileName = '') {
+    const previewItem = document.createElement('div');
+    previewItem.className = 'image-preview-item';
+    previewItem.style.cssText = 'position: relative; display: inline-block; margin: 5px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #f9f9f9;';
+    
+    const img = document.createElement('img');
+    img.src = base64;
+    img.className = 'preview-image';
+    img.style.cssText = 'width: 100px; height: 100px; object-fit: cover; display: block;';
+    img.alt = fileName || '预览图片';
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'image-preview-remove';
+    removeBtn.innerHTML = '×';
+    removeBtn.style.cssText = 'position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border: none; background: rgba(255, 0, 0, 0.7); color: white; border-radius: 50%; cursor: pointer; font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center;';
+    removeBtn.title = '删除图片';
+    removeBtn.onclick = () => {
+        container.removeChild(previewItem);
+        showSuccess('图片已删除');
+    };
+    
+    // 添加文件名显示（如果有）
+    if (fileName) {
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'image-name';
+        nameDiv.style.cssText = 'padding: 4px; font-size: 10px; color: #666; text-align: center; word-break: break-all; max-width: 100px;';
+        nameDiv.textContent = fileName.length > 15 ? fileName.substring(0, 12) + '...' : fileName;
+        nameDiv.title = fileName;
+        previewItem.appendChild(nameDiv);
+    }
+    
+    previewItem.appendChild(img);
+    previewItem.appendChild(removeBtn);
+    container.appendChild(previewItem);
+}
+
+// 获取预览图片的base64数据
+function getPreviewImages(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return [];
+    
+    const images = [];
+    const previewItems = container.querySelectorAll('.image-preview-item img');
+    
+    previewItems.forEach(img => {
+        images.push(img.src);
+    });
+    
+    return images;
+}
+
+// 清除图片预览
+function clearImagePreview(containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.innerHTML = '';
+    }
+}
+
+// 工具函数
+function getSeverityClass(severity) {
+    switch (severity) {
+        case '低': return 'low';
+        case '中': return 'medium';
+        case '高': return 'high';
+        case '极高': return 'high';
+        default: return 'medium';
+    }
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString('zh-CN');
+}
+
+function showLoading() {
+    let loadingDiv = document.getElementById('loading-overlay');
+    if (!loadingDiv) {
+        loadingDiv = document.createElement('div');
+        loadingDiv.id = 'loading-overlay';
+        loadingDiv.innerHTML = '<div class="loading-spinner">处理中...</div>';
+        loadingDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10001;';
+        
+        const spinner = loadingDiv.querySelector('.loading-spinner');
+        spinner.style.cssText = 'background: white; padding: 20px 40px; border-radius: 8px; font-size: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
+        
+        document.body.appendChild(loadingDiv);
+    }
+    loadingDiv.style.display = 'flex';
+}
+
+function hideLoading() {
+    const loadingDiv = document.getElementById('loading-overlay');
+    if (loadingDiv) {
+        loadingDiv.style.display = 'none';
+    }
+}
+
+function showSuccess(message) {
+    showNotification(message, 'success');
+}
+
+function showError(message) {
+    showNotification(message, 'error');
+}
+
+// 通用通知函数
+function showNotification(message, type = 'info') {
+    const notificationDiv = document.createElement('div');
+    notificationDiv.className = `notification notification-${type}`;
+    notificationDiv.textContent = message;
+    
+    const colors = {
+        error: '#ff4444',
+        success: '#44ff44',
+        info: '#4444ff',
+        warning: '#ffaa44'
+    };
+    
+    notificationDiv.style.cssText = `
+        position: fixed; 
+        top: 20px; 
+        right: 20px; 
+        background: ${colors[type] || colors.info}; 
+        color: white; 
+        padding: 12px 20px; 
+        border-radius: 6px; 
+        z-index: 10000; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        font-size: 14px;
+        max-width: 300px;
+        word-wrap: break-word;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    // 添加动画样式
+    if (!document.getElementById('notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(notificationDiv);
+    
+    // 自动移除通知
+    setTimeout(() => {
+        if (notificationDiv.parentNode) {
+            notificationDiv.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => {
+                if (notificationDiv.parentNode) {
+                    notificationDiv.parentNode.removeChild(notificationDiv);
+                }
+            }, 300);
+        }
+    }, type === 'error' ? 6000 : 3000);
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    setupEventListeners();
+    updateViewCount();
+    loadCompanyEvents();
+    loadCtoHistory();
+    loadComments();
+    setupFormValidation();
+    setupImageUpload();
 });
