@@ -1,6 +1,12 @@
-import { getCtoHistory } from './utils/db.js';
+import { getCtoHistory, initDatabase } from './utils/db.js';
 
 export default async function handler(event, context) {
+  // 确保数据库表已初始化
+  try {
+    await initDatabase();
+  } catch (error) {
+    console.log('数据库初始化警告:', error.message);
+  }
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',

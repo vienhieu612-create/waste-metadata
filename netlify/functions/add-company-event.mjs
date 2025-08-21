@@ -1,4 +1,4 @@
-import { addCompanyEvent, logEvent } from './utils/db.js';
+import { addCompanyEvent, logEvent, initDatabase } from './utils/db.js';
 
 // 生成验证码
 function generateCaptcha() {
@@ -16,6 +16,13 @@ function validateCaptcha(userInput, correctAnswer) {
 }
 
 export default async function handler(event, context) {
+  // 确保数据库表已初始化
+  try {
+    await initDatabase();
+  } catch (error) {
+    console.log('数据库初始化警告:', error.message);
+  }
+  
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
