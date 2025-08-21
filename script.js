@@ -957,6 +957,98 @@ function insertEmoji(emoji) {
     }
 }
 
+// 表情选择器相关变量
+let isEmojiPickerOpen = false;
+let currentEmojiCategory = 'smileys-emotion';
+
+// 切换表情选择器显示/隐藏
+function toggleEmojiPicker() {
+    const emojiPickerContent = document.querySelector('.emoji-picker-content');
+    const emojiSearchContainer = document.querySelector('.emoji-search-container');
+    
+    if (isEmojiPickerOpen) {
+        emojiPickerContent.style.display = 'none';
+        emojiSearchContainer.style.display = 'none';
+        isEmojiPickerOpen = false;
+    } else {
+        emojiPickerContent.style.display = 'block';
+        emojiSearchContainer.style.display = 'block';
+        isEmojiPickerOpen = true;
+        loadEmojisByCategory(currentEmojiCategory);
+        setupEmojiCategoryListeners();
+    }
+}
+
+// 根据分类加载表情
+function loadEmojisByCategory(category) {
+    if (typeof getEmojisByCategory === 'undefined') {
+        console.error('表情数据未加载');
+        return;
+    }
+    
+    const emojis = getEmojisByCategory(category);
+    const emojiGrid = document.getElementById('emojiGrid');
+    
+    if (emojiGrid) {
+        emojiGrid.innerHTML = '';
+        emojis.forEach(emoji => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'emoji-btn';
+            button.textContent = emoji.emoji;
+            button.title = emoji.name;
+            button.onclick = () => insertEmoji(emoji.emoji);
+            emojiGrid.appendChild(button);
+        });
+    }
+}
+
+// 搜索表情
+function searchEmojis(query) {
+    if (typeof window.searchEmojis === 'undefined') {
+        console.error('表情数据未加载');
+        return;
+    }
+    
+    const emojis = window.searchEmojis(query);
+    const emojiGrid = document.getElementById('emojiGrid');
+    
+    if (emojiGrid) {
+        emojiGrid.innerHTML = '';
+        if (query.trim() === '') {
+            loadEmojisByCategory(currentEmojiCategory);
+            return;
+        }
+        
+        emojis.forEach(emoji => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'emoji-btn';
+            button.textContent = emoji.emoji;
+            button.title = emoji.name;
+            button.onclick = () => insertEmoji(emoji.emoji);
+            emojiGrid.appendChild(button);
+        });
+    }
+}
+
+// 设置表情分类按钮监听器
+function setupEmojiCategoryListeners() {
+    const categoryButtons = document.querySelectorAll('.emoji-category-btn');
+    categoryButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // 移除所有active类
+            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            // 添加active类到当前按钮
+            this.classList.add('active');
+            // 更新当前分类
+            currentEmojiCategory = this.dataset.category;
+            // 加载该分类的表情
+            loadEmojisByCategory(currentEmojiCategory);
+        });
+    });
+}
+
 // 设置表单验证
 function setupFormValidation() {
     // 评论表单
@@ -1479,139 +1571,63 @@ function showNotification(message, type = 'info') {
     }, type === 'error' ? 6000 : 3000);
 }
 
-// 图片放大模态框功能
-let imageScale = 1;
-let imageTranslateX = 0;
-let imageTranslateY = 0;
-let isDragging = false;
-let dragStartX = 0;
-let dragStartY = 0;
+// PhotoSwipe 图片查看器功能
+let pswp = null;
 
 function openImageModal(imageSrc, imageAlt) {
-    const modal = document.getElementById('imageModal');
-    const modalImage = document.getElementById('modalImage');
+    // 创建PhotoSwipe数据项
+    const items = [{
+        src: imageSrc,
+        w: 0, // 宽度将在加载时自动计算
+        h: 0, // 高度将在加载时自动计算
+        title: imageAlt || '图片'
+    }];
     
-    if (modal && modalImage) {
-        modalImage.src = imageSrc;
-        modalImage.alt = imageAlt || '图片';
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        
-        // 重置图片状态
-        resetImageZoom();
-        
-        // 等待图片加载完成后居中显示
-        modalImage.onload = function() {
-            centerImage();
-        };
-    }
+    // PhotoSwipe选项
+    const options = {
+        index: 0,
+        bgOpacity: 0.8,
+        showHideOpacity: true,
+        closeOnScroll: false,
+        closeOnVerticalDrag: true,
+        mouseUsed: false,
+        escKey: true,
+        arrowKeys: true,
+        history: false,
+        galleryUID: 1,
+        getThumbBoundsFn: function(index) {
+            // 返回缩略图的位置信息，用于动画效果
+            return {x:0, y:0, w:0};
+        }
+    };
+    
+    // 初始化PhotoSwipe
+    const pswpElement = document.querySelectorAll('.pswp')[0];
+    pswp = new PhotoSwipe(pswpElement, PhotoSwipeUI_Default, items, options);
+    
+    // 监听图片加载完成事件，获取真实尺寸
+    pswp.listen('imageLoadComplete', function(index, item) {
+        if (item.h < 1 || item.w < 1) {
+            const img = new Image();
+            img.onload = function() {
+                item.w = this.width;
+                item.h = this.height;
+                pswp.updateSize(true);
+            };
+            img.src = item.src;
+        }
+    });
+    
+    // 初始化并打开
+    pswp.init();
 }
 
+// 为了保持兼容性，保留closeImageModal函数
 function closeImageModal() {
-    const modal = document.getElementById('imageModal');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        resetImageZoom();
+    if (pswp) {
+        pswp.close();
     }
 }
-
-function zoomImage(delta) {
-    const modalImage = document.getElementById('modalImage');
-    if (!modalImage) return;
-    
-    imageScale = Math.max(0.5, Math.min(3, imageScale + delta));
-    updateImageTransform();
-    
-    // 添加或移除zoomed类
-    if (imageScale > 1) {
-        modalImage.classList.add('zoomed');
-    } else {
-        modalImage.classList.remove('zoomed');
-    }
-}
-
-function resetImageZoom() {
-    const modalImage = document.getElementById('modalImage');
-    if (!modalImage) return;
-    
-    imageScale = 1;
-    imageTranslateX = 0;
-    imageTranslateY = 0;
-    updateImageTransform();
-    modalImage.classList.remove('zoomed');
-}
-
-function centerImage() {
-    const modalImage = document.getElementById('modalImage');
-    const modalBody = document.querySelector('.image-modal-body');
-    if (!modalImage || !modalBody) return;
-    
-    const bodyRect = modalBody.getBoundingClientRect();
-    const imgRect = modalImage.getBoundingClientRect();
-    
-    // 计算居中位置
-    imageTranslateX = (bodyRect.width - imgRect.width) / 2;
-    imageTranslateY = (bodyRect.height - imgRect.height) / 2;
-    
-    updateImageTransform();
-}
-
-function updateImageTransform() {
-    const modalImage = document.getElementById('modalImage');
-    if (!modalImage) return;
-    
-    modalImage.style.transform = `translate(${imageTranslateX}px, ${imageTranslateY}px) scale(${imageScale})`;
-}
-
-// 图片拖拽功能
-document.addEventListener('mousedown', function(e) {
-    const modalImage = document.getElementById('modalImage');
-    if (e.target === modalImage && imageScale > 1) {
-        isDragging = true;
-        dragStartX = e.clientX - imageTranslateX;
-        dragStartY = e.clientY - imageTranslateY;
-        e.preventDefault();
-    }
-});
-
-document.addEventListener('mousemove', function(e) {
-    if (isDragging) {
-        imageTranslateX = e.clientX - dragStartX;
-        imageTranslateY = e.clientY - dragStartY;
-        updateImageTransform();
-        e.preventDefault();
-    }
-});
-
-document.addEventListener('mouseup', function(e) {
-    isDragging = false;
-});
-
-// 鼠标滚轮缩放
-document.addEventListener('wheel', function(e) {
-    const modal = document.getElementById('imageModal');
-    if (modal && modal.style.display === 'flex') {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        zoomImage(delta);
-    }
-});
-
-// 点击模态框背景关闭
-document.addEventListener('click', function(e) {
-    const modal = document.getElementById('imageModal');
-    if (e.target === modal) {
-        closeImageModal();
-    }
-});
-
-// ESC键关闭模态框
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeImageModal();
-    }
-});
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', async function() {
