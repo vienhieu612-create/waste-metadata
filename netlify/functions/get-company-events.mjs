@@ -1,6 +1,6 @@
 import { getCompanyEvents, initDatabase } from './utils/db.js';
 
-export default async function handler(event, context) {
+export const handler = async (event, context) => {
   // 确保数据库表已初始化
   try {
     await initDatabase();

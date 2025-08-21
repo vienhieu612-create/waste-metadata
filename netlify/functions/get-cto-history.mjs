@@ -1,6 +1,6 @@
 import { getCtoHistory, initDatabase } from './utils/db.js';
 
-export default async function handler(event, context) {
+export const handler = async (event, context) => {
   // 确保数据库表已初始化
   try {
     await initDatabase();
@@ -18,6 +18,7 @@ export default async function handler(event, context) {
   }
 
   try {
+    console.log('Event object:', JSON.stringify(event));
     if (event.httpMethod !== 'GET') {
       return new Response(JSON.stringify({ error: '只支持GET请求' }), {
         status: 405,

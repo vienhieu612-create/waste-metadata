@@ -5,7 +5,7 @@ function validateCaptcha(userInput, correctAnswer) {
   return userInput.toUpperCase() === correctAnswer.toUpperCase();
 }
 
-export default async function handler(event, context) {
+export const handler = async (event, context) => {
   // 确保数据库表已初始化
   try {
     await initDatabase();
