@@ -5,69 +5,120 @@ const sql = neon(process.env.NETLIFY_DATABASE_URL);
 // 初始化数据库表
 export async function initDatabase() {
   try {
-    // 访问记录表
-    await sql`
-      CREATE TABLE IF NOT EXISTS page_views (
-        id SERIAL PRIMARY KEY,
-        ip_address VARCHAR(45),
-        user_agent TEXT,
-        page_url VARCHAR(255),
-        referrer VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    // 检查表是否存在，避免重复创建
+    const tableExists = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'page_views'
       )
     `;
+    
+    if (!tableExists[0].exists) {
+      // 访问记录表
+      await sql`
+        CREATE TABLE page_views (
+          id SERIAL PRIMARY KEY,
+          ip_address VARCHAR(45),
+          user_agent TEXT,
+          page_url VARCHAR(255),
+          referrer VARCHAR(255),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+    }
 
     // 公司离谱事件表
-    await sql`
-      CREATE TABLE IF NOT EXISTS company_events (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(200) NOT NULL,
-        description TEXT NOT NULL,
-        severity VARCHAR(20) NOT NULL CHECK (severity IN ('低', '中', '高', '极高')),
-        images JSONB DEFAULT '[]',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    const companyEventsExists = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'company_events'
       )
     `;
+    
+    if (!companyEventsExists[0].exists) {
+      await sql`
+        CREATE TABLE company_events (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(200) NOT NULL,
+          description TEXT NOT NULL,
+          severity VARCHAR(20) NOT NULL CHECK (severity IN ('低', '中', '高', '极高')),
+          images JSONB DEFAULT '[]',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+    }
 
     // CTO黑历史表
-    await sql`
-      CREATE TABLE IF NOT EXISTS cto_history (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(200) NOT NULL,
-        description TEXT NOT NULL,
-        images JSONB DEFAULT '[]',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    const ctoHistoryExists = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'cto_history'
       )
     `;
+    
+    if (!ctoHistoryExists[0].exists) {
+      await sql`
+        CREATE TABLE cto_history (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(200) NOT NULL,
+          description TEXT NOT NULL,
+          images JSONB DEFAULT '[]',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+    }
 
     // 评论表
-    await sql`
-      CREATE TABLE IF NOT EXISTS comments (
-        id SERIAL PRIMARY KEY,
-        author VARCHAR(100) NOT NULL,
-        content TEXT NOT NULL,
-        ip_address VARCHAR(45),
-        user_agent TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    const commentsExists = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'comments'
       )
     `;
+    
+    if (!commentsExists[0].exists) {
+      await sql`
+        CREATE TABLE comments (
+          id SERIAL PRIMARY KEY,
+          author VARCHAR(100) NOT NULL,
+          content TEXT NOT NULL,
+          ip_address VARCHAR(45),
+          user_agent TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+    }
 
     // 事件日志表
-    await sql`
-      CREATE TABLE IF NOT EXISTS event_logs (
-        id SERIAL PRIMARY KEY,
-        event_type VARCHAR(50),
-        event_data JSONB,
-        ip_address VARCHAR(45),
-        user_agent TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    const eventLogsExists = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'event_logs'
       )
     `;
+    
+    if (!eventLogsExists[0].exists) {
+      await sql`
+        CREATE TABLE event_logs (
+          id SERIAL PRIMARY KEY,
+          event_type VARCHAR(50),
+          event_data JSONB,
+          ip_address VARCHAR(45),
+          user_agent TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+    }
 
     console.log('数据库表初始化完成');
   } catch (error) {
     console.error('数据库初始化失败:', error);
-    throw error;
+    // 不重新抛出错误，允许函数继续执行
   }
 }
 

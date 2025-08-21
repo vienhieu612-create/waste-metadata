@@ -6,6 +6,7 @@ export default async function handler(event, context) {
     await initDatabase();
   } catch (error) {
     console.log('数据库初始化警告:', error.message);
+    // 继续执行，不阻止函数运行
   }
   const headers = {
     'Access-Control-Allow-Origin': '*',
