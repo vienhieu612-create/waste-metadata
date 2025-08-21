@@ -33,13 +33,13 @@ export const handler = async (event, context) => {
     const { author, content, captcha, captchaAnswer } = body;
 
     // 验证必填字段
-    if (!author || !content) {
+    if (!content) {
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({
           success: false,
-          error: '姓名和评论内容为必填项'
+          error: '评论内容为必填项'
         })
       };
     }

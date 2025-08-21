@@ -1,0 +1,62 @@
+import { getPageStats, initDatabase } from './utils/db.js';
+
+export const handler = async (event, context) => {
+  // 确保数据库表已初始化
+  try {
+    await initDatabase();
+  } catch (error) {
+    console.log('数据库初始化警告:', error.message);
+    // 继续执行，不阻止函数运行
+  }
+  
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
+    };
+  }
+
+  try {
+    if (event.httpMethod !== 'GET') {
+      return {
+        statusCode: 405,
+        headers,
+        body: JSON.stringify({ error: '只支持GET请求' })
+      };
+    }
+
+    const result = await getPageStats();
+
+    if (result.success) {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(result)
+      };
+    } else {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify(result)
+      };
+    }
+
+  } catch (error) {
+    console.error('获取页面统计失败:', error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: '服务器内部错误'
+      })
+    };
+  }
+};

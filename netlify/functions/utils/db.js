@@ -168,6 +168,30 @@ export async function getPageViewStats() {
   }
 }
 
+// 获取页面统计数据（包括访问量和事件数量）
+export async function getPageStats() {
+  try {
+    const totalViews = await sql`
+      SELECT COUNT(*) as total FROM page_views
+    `;
+    
+    const totalEvents = await sql`
+      SELECT COUNT(*) as total FROM company_events
+    `;
+
+    return {
+      success: true,
+      data: {
+        viewCount: parseInt(totalViews[0].total),
+        eventCount: parseInt(totalEvents[0].total)
+      }
+    };
+  } catch (error) {
+    console.error('获取页面统计失败:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // 获取公司事件列表（分页）
 export async function getCompanyEvents(page = 1, limit = 6) {
   try {

@@ -7,14 +7,14 @@ const images = [];
 // API服务配置
 const API_CONFIG = {
     // Netlify Functions API端点
-    LOG_VIEW: '/api/log-view',
-    GET_STATS: '/api/get-stats',
-    GET_COMPANY_EVENTS: '/api/get-company-events',
-    ADD_COMPANY_EVENT: '/api/add-company-event',
-    GET_CTO_HISTORY: '/api/get-cto-history',
-    ADD_CTO_HISTORY: '/api/add-cto-history',
-    GET_COMMENTS: '/api/get-comments',
-    ADD_COMMENT: '/api/add-comment'
+    LOG_VIEW: '/.netlify/functions/log-page-view',
+    GET_STATS: '/.netlify/functions/get-page-stats',
+    GET_COMPANY_EVENTS: '/.netlify/functions/get-company-events',
+    ADD_COMPANY_EVENT: '/.netlify/functions/add-company-event',
+    GET_CTO_HISTORY: '/.netlify/functions/get-cto-history',
+    ADD_CTO_HISTORY: '/.netlify/functions/add-cto-history',
+    GET_COMMENTS: '/.netlify/functions/get-comments',
+    ADD_COMMENT: '/.netlify/functions/add-comment'
 };
 
 
@@ -474,6 +474,34 @@ async function getPageStats() {
     return await response.json();
 }
 
+// 加载页面统计数据
+async function loadPageStats() {
+    try {
+        const response = await getPageStats();
+        if (response.success) {
+            const { viewCount, eventCount } = response.data;
+            
+            // 更新阅读量
+            const viewCountElement = document.getElementById('viewCount');
+            if (viewCountElement) {
+                viewCountElement.textContent = viewCount;
+            }
+            
+            // 更新事件数量
+            const eventCountElements = document.querySelectorAll('.stats .stat-item:nth-child(2) .stat-number');
+            eventCountElements.forEach(element => {
+                element.textContent = eventCount;
+            });
+            
+            console.log('页面统计数据加载成功:', { viewCount, eventCount });
+        } else {
+            console.error('获取页面统计失败:', response.error);
+        }
+    } catch (error) {
+        console.error('加载页面统计数据失败:', error);
+    }
+}
+
 // 生成验证码
 function generateCaptcha() {
     const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -896,6 +924,37 @@ function refreshCommentCaptcha() {
     }
 }
 
+// 插入表情到评论框
+function insertEmoji(emoji) {
+    const commentContent = document.getElementById('commentContent');
+    const commentCharCount = document.getElementById('commentCharCount');
+    
+    if (commentContent) {
+        const currentValue = commentContent.value;
+        const cursorPosition = commentContent.selectionStart;
+        
+        // 检查是否超过字符限制
+        if (currentValue.length + emoji.length > 200) {
+            showError('添加表情后将超过字符限制');
+            return;
+        }
+        
+        // 在光标位置插入表情
+        const newValue = currentValue.slice(0, cursorPosition) + emoji + currentValue.slice(cursorPosition);
+        commentContent.value = newValue;
+        
+        // 更新字符计数
+        if (commentCharCount) {
+            commentCharCount.textContent = newValue.length;
+        }
+        
+        // 设置光标位置到表情后面
+        const newCursorPosition = cursorPosition + emoji.length;
+        commentContent.setSelectionRange(newCursorPosition, newCursorPosition);
+        commentContent.focus();
+    }
+}
+
 // 设置表单验证
 function setupFormValidation() {
     // 评论表单
@@ -947,7 +1006,7 @@ async function handleCommentSubmit(event) {
     
     const formData = new FormData(event.target);
     const data = {
-        author: formData.get('author'),
+        author: '匿名用户', // 使用默认匿名用户名
         content: formData.get('content'),
         captcha: formData.get('captcha'),
         captchaAnswer: commentCaptchaAnswer
@@ -1202,7 +1261,7 @@ async function handleImageUpload(files, previewContainerId) {
         try {
             showLoading();
             const base64 = await convertToBase64(file);
-            addImagePreview(base64, previewContainer, file.name);
+            addImagePreview(base64, previewContainer, file.name, file.type);
             successCount++;
         } catch (error) {
             showError(`文件 "${file.name}" 处理失败: ${error.message}`);
@@ -1232,7 +1291,7 @@ function convertToBase64(file) {
 }
 
 // 添加图片预览
-function addImagePreview(base64, container, fileName = '') {
+function addImagePreview(base64, container, fileName = '', mimeType = '') {
     const previewItem = document.createElement('div');
     previewItem.className = 'image-preview-item';
     previewItem.style.cssText = 'position: relative; display: inline-block; margin: 5px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #f9f9f9;';
@@ -1242,6 +1301,11 @@ function addImagePreview(base64, container, fileName = '') {
     img.className = 'preview-image';
     img.style.cssText = 'width: 100px; height: 100px; object-fit: cover; display: block;';
     img.alt = fileName || '预览图片';
+    
+    // 存储MIME类型信息到data属性中
+    if (mimeType) {
+        img.setAttribute('data-mime-type', mimeType);
+    }
     
     const removeBtn = document.createElement('button');
     removeBtn.className = 'image-preview-remove';
@@ -1277,7 +1341,16 @@ function getPreviewImages(containerId) {
     const previewItems = container.querySelectorAll('.image-preview-item img');
     
     previewItems.forEach(img => {
-        images.push(img.src);
+        const base64Data = img.src;
+        const mimeType = img.getAttribute('data-mime-type') || 'image/jpeg';
+        
+        // 提取base64数据部分（去掉data:image/xxx;base64,前缀）
+        const base64String = base64Data.split(',')[1] || base64Data;
+        
+        images.push({
+            data: base64String,
+            type: mimeType
+        });
     });
     
     return images;
@@ -1407,13 +1480,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // 并行加载所有数据
         await Promise.all([
+            loadPageStats(),
             loadCompanyEvents(),
             loadCtoHistory(),
             loadComments()
         ]);
         
         setupFormValidation();
-        setupImageUpload();
+        // setupImageUpload() 已在 setupFormValidation() 中调用，不需要重复调用
         
         // 隐藏初始加载页面
         const initialLoading = document.getElementById('loading');
